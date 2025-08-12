@@ -1,0 +1,30 @@
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Scala / sbt / JVM
+target/
+project/target/
+project/project/
+.metals/
+.bloop/
+.antlr/
+.scala-build/
+*.class
+*.log
+
+# Bazel
+bazel-*/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Docker
+*.env

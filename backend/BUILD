@@ -7,7 +7,7 @@
 # 定義するファイルです。ソースファイル、依存関係、ビルドターゲットを
 # 指定します。
 
-load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_library", "scala_test")
+load("@rules_scala//scala:scala.bzl", "scala_binary", "scala_library", "scala_test")
 # Docker image support temporarily disabled
 # load("@io_bazel_rules_docker//scala:image.bzl", "scala_image")
 
@@ -15,19 +15,20 @@ load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_library", 
 # ライブラリターゲット: 認証関連
 # ============================================================================
 
-# JWTAuthenticationHandlerとPasswordHashingUtilityを含むライブラリ
+# JWTAuthenticationHandlerを含むライブラリ
 scala_library(
     name = "auth_library",
     srcs = [
         "src/main/scala/com/taskmanagement/auth/JwtAuthenticationHandler.scala",
-        "src/main/scala/com/taskmanagement/auth/PasswordHashingUtility.scala",
     ],
     deps = [
-        "@maven//:com_github_jwt_scala_jwt_core_2_13",
-        "@maven//:org_mindrot_jbcrypt",
-        "@maven//:com_typesafe_config",
-        "@maven//:ch_qos_logback_logback_classic",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        ":models_library",
+        "@maven_portfolio//:com_github_jwt_scala_jwt_core_2_13",
+        "@maven_portfolio//:org_mindrot_jbcrypt",
+        "@maven_portfolio//:com_typesafe_config",
+        "@maven_portfolio//:ch_qos_logback_logback_classic",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -43,9 +44,10 @@ scala_library(
         "src/main/scala/com/taskmanagement/db/DatabaseSchema.scala",
     ],
     deps = [
-        "@maven//:com_typesafe_slick_slick_2_13",
-        "@maven//:com_typesafe_slick_slick_hikaricp_2_13",
-        "@maven//:org_postgresql_postgresql",
+        ":models_library",
+        "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_hikaricp_2_13",
+        "@maven_portfolio//:org_postgresql_postgresql",
     ],
     visibility = ["//visibility:public"],
 )
@@ -77,9 +79,9 @@ scala_library(
         ":auth_library",
         ":database_schema_library",
         ":models_library",
-        "@maven//:com_typesafe_slick_slick_2_13",
-        "@maven//:org_apache_pekko_pekko_actor_typed_2_13",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_actor_typed_2_13",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -93,9 +95,9 @@ scala_library(
     deps = [
         ":database_schema_library",
         ":models_library",
-        "@maven//:com_typesafe_slick_slick_2_13",
-        "@maven//:org_apache_pekko_pekko_actor_typed_2_13",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_actor_typed_2_13",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -109,9 +111,9 @@ scala_library(
     deps = [
         ":database_schema_library",
         ":models_library",
-        "@maven//:com_typesafe_slick_slick_2_13",
-        "@maven//:org_apache_pekko_pekko_actor_typed_2_13",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_actor_typed_2_13",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -128,8 +130,8 @@ scala_library(
     ],
     deps = [
         ":models_library",
-        "@maven//:org_apache_pekko_pekko_http_spray_json_2_13",
-        "@maven//:io_spray_spray_json_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_spray_json_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -147,9 +149,12 @@ scala_library(
         ":project_management_service_library",
         ":json_protocols_library",
         ":models_library",
-        "@maven//:org_apache_pekko_pekko_http_2_13",
-        "@maven//:org_apache_pekko_pekko_stream_2_13",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_core_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_spray_json_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_stream_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -178,15 +183,19 @@ scala_binary(
         ":project_management_service_library",
         ":routes_library",
         ":json_protocols_library",
-        "@maven//:org_apache_pekko_pekko_actor_typed_2_13",
-        "@maven//:org_apache_pekko_pekko_stream_2_13",
-        "@maven//:org_apache_pekko_pekko_http_2_13",
-        "@maven//:com_typesafe_slick_slick_2_13",
-        "@maven//:com_typesafe_slick_slick_hikaricp_2_13",
-        "@maven//:org_postgresql_postgresql",
-        "@maven//:com_typesafe_config",
-        "@maven//:ch_qos_logback_logback_classic",
-        "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_actor_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_actor_typed_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_stream_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_core_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_2_13",
+        "@maven_portfolio//:org_apache_pekko_pekko_http_spray_json_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+        "@maven_portfolio//:com_typesafe_slick_slick_hikaricp_2_13",
+        "@maven_portfolio//:org_postgresql_postgresql",
+        "@maven_portfolio//:com_typesafe_config",
+        "@maven_portfolio//:ch_qos_logback_logback_classic",
+        "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
     ],
     visibility = ["//visibility:public"],
 )
@@ -215,15 +224,15 @@ scala_binary(
 #         ":project_management_service_library",
 #         ":routes_library",
 #         ":json_protocols_library",
-#         "@maven//:org_apache_pekko_pekko_actor_typed_2_13",
-#         "@maven//:org_apache_pekko_pekko_stream_2_13",
-#         "@maven//:org_apache_pekko_pekko_http_2_13",
-#         "@maven//:com_typesafe_slick_slick_2_13",
-#         "@maven//:com_typesafe_slick_slick_hikaricp_2_13",
-#         "@maven//:org_postgresql_postgresql",
-#         "@maven//:com_typesafe_config",
-#         "@maven//:ch_qos_logback_logback_classic",
-#         "@maven//:com_typesafe_scala_logging_scala_logging_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_actor_typed_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_stream_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_http_2_13",
+#         "@maven_portfolio//:com_typesafe_slick_slick_2_13",
+#         "@maven_portfolio//:com_typesafe_slick_slick_hikaricp_2_13",
+#         "@maven_portfolio//:org_postgresql_postgresql",
+#         "@maven_portfolio//:com_typesafe_config",
+#         "@maven_portfolio//:ch_qos_logback_logback_classic",
+#         "@maven_portfolio//:com_typesafe_scala_logging_scala_logging_2_13",
 #     ],
 #     base = "@java_base//image",
 #     visibility = ["//visibility:public"],
@@ -242,8 +251,8 @@ scala_binary(
 #         ":auth_library",
 #         ":database_schema_library",
 #         ":models_library",
-#         "@maven//:org_scalatest_scalatest_2_13",
-#         "@maven//:org_apache_pekko_pekko_actor_testkit_typed_2_13",
+#         "@maven_portfolio//:org_scalatest_scalatest_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_actor_testkit_typed_2_13",
 #     ],
 #     size = "small",
 # )
@@ -256,8 +265,8 @@ scala_binary(
 #         ":task_management_service_library",
 #         ":database_schema_library",
 #         ":models_library",
-#         "@maven//:org_scalatest_scalatest_2_13",
-#         "@maven//:org_apache_pekko_pekko_actor_testkit_typed_2_13",
+#         "@maven_portfolio//:org_scalatest_scalatest_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_actor_testkit_typed_2_13",
 #     ],
 #     size = "small",
 # )
@@ -273,8 +282,8 @@ scala_binary(
 #         ":project_management_service_library",
 #         ":json_protocols_library",
 #         ":models_library",
-#         "@maven//:org_scalatest_scalatest_2_13",
-#         "@maven//:org_apache_pekko_pekko_http_testkit_2_13",
+#         "@maven_portfolio//:org_scalatest_scalatest_2_13",
+#         "@maven_portfolio//:org_apache_pekko_pekko_http_testkit_2_13",
 #     ],
 #     size = "medium",
 # )

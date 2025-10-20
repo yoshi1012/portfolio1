@@ -12,9 +12,9 @@
 # 共通設定
 # ============================================================================
 
-# Enable WORKSPACE mode for Bazel 8.x
-# Note: Bzlmod is preferred but has Scala toolchain configuration issues
-common --enable_workspace
+# Enable Bzlmod (modern Bazel module system)
+common --enable_bzlmod
+build --sandbox_debug
 
 # ビルド結果を色付きで表示（見やすくするため）
 common --color=yes

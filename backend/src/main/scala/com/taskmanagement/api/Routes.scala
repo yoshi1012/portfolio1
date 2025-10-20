@@ -1,10 +1,10 @@
 package com.taskmanagement.api
 
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Route, AuthenticationFailedRejection, Directive1}
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.headers.HttpChallenge
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.{Route, AuthenticationFailedRejection, Directive1}
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.headers.HttpChallenge
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import com.taskmanagement.services._
 import com.taskmanagement.models._
 import com.taskmanagement.auth.JwtAuthenticationHandler

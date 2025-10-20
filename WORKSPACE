@@ -11,18 +11,50 @@
 workspace(name = "portfolio1")
 
 # ============================================================================
+# Bazel Skylib (必須の基本ライブラリ)
+# ============================================================================
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+    ],
+)
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+bazel_skylib_workspace()
+
+# ============================================================================
+# Java関連のルール
+# ============================================================================
+
+http_archive(
+    name = "rules_java",
+    urls = [
+        "https://github.com/bazelbuild/rules_java/releases/download/8.6.3/rules_java-8.6.3.tar.gz",
+    ],
+)
+
+load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
+rules_java_dependencies()
+rules_java_toolchains()
+
+# ============================================================================
 # Scala関連のルール
 # ============================================================================
 
 # rules_scalaは、BazelでScalaプロジェクトをビルドするためのルール集です
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-# Scala rules のバージョン 6.4.0 を使用
+# Scala rules のバージョン 6.5.0 を使用
 http_archive(
     name = "io_bazel_rules_scala",
-    sha256 = "9a23058a36183a556a9ba7229b4f204d3e68c8c6eb7b28260521016b38ef4e00",
-    strip_prefix = "rules_scala-6.4.0",
-    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.4.0/rules_scala-v6.4.0.tar.gz",
+    sha256 = "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5",
+    strip_prefix = "rules_scala-6.5.0",
+    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.5.0/rules_scala-6.5.0.tar.gz",
 )
 
 # Scala rules の初期化
@@ -52,11 +84,11 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 # Scalaバックエンドで使用するMaven依存関係を定義
 maven_install(
     artifacts = [
-        # Akka HTTP - HTTPサーバーフレームワーク
-        "com.typesafe.akka:akka-actor-typed_2.13:2.8.5",
-        "com.typesafe.akka:akka-stream_2.13:2.8.5",
-        "com.typesafe.akka:akka-http_2.13:10.5.3",
-        "com.typesafe.akka:akka-http-spray-json_2.13:10.5.3",
+        # Pekko HTTP - HTTPサーバーフレームワーク (Apache-licensed fork of Akka)
+        "org.apache.pekko:pekko-actor-typed_2.13:1.0.3",
+        "org.apache.pekko:pekko-stream_2.13:1.0.3",
+        "org.apache.pekko:pekko-http_2.13:1.0.1",
+        "org.apache.pekko:pekko-http-spray-json_2.13:1.0.1",
         
         # Slick - データベースORM
         "com.typesafe.slick:slick_2.13:3.5.0",
@@ -83,8 +115,8 @@ maven_install(
         
         # テスト用
         "org.scalatest:scalatest_2.13:3.2.17",
-        "com.typesafe.akka:akka-http-testkit_2.13:10.5.3",
-        "com.typesafe.akka:akka-actor-testkit-typed_2.13:2.8.5",
+        "org.apache.pekko:pekko-http-testkit_2.13:1.0.1",
+        "org.apache.pekko:pekko-actor-testkit-typed_2.13:1.0.3",
     ],
     repositories = [
         "https://repo1.maven.org/maven2",

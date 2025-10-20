@@ -1,0 +1,65 @@
+###############################################################################
+# Bazel Module (Bzlmod) configuration for Asana-like Task Management App
+###############################################################################
+
+module(
+    name = "taskmanagement",
+    version = "1.0.0",
+)
+
+# Scala rules for building Scala projects
+bazel_dep(name = "rules_scala", version = "7.1.2")
+
+# Configure Scala version to 2.13.12
+scala = use_extension("@rules_scala//scala:extensions.bzl", "scala")
+scala.scala_config(scala_version = "2.13.12")
+use_repo(scala, "io_bazel_rules_scala_config")
+
+# Java rules (required by Scala)
+bazel_dep(name = "rules_java", version = "8.14.0")
+
+# JVM external dependencies
+bazel_dep(name = "rules_jvm_external", version = "6.5")
+
+# Maven dependencies
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+
+maven.install(
+    artifacts = [
+        # Pekko HTTP - HTTPサーバーフレームワーク (Apache-licensed fork of Akka)
+        "org.apache.pekko:pekko-actor-typed_2.13:1.0.3",
+        "org.apache.pekko:pekko-stream_2.13:1.0.3",
+        "org.apache.pekko:pekko-http_2.13:1.0.1",
+        "org.apache.pekko:pekko-http-spray-json_2.13:1.0.1",
+        
+        # Slick - データベースORM
+        "com.typesafe.slick:slick_2.13:3.5.0",
+        "com.typesafe.slick:slick-hikaricp_2.13:3.5.0",
+        
+        # PostgreSQL driver
+        "org.postgresql:postgresql:42.7.1",
+        
+        # JWT authentication
+        "com.github.jwt-scala:jwt-core_2.13:9.4.5",
+        
+        # BCrypt for password hashing
+        "org.mindrot:jbcrypt:0.4",
+        
+        # Logging
+        "ch.qos.logback:logback-classic:1.4.14",
+        "com.typesafe.scala-logging:scala-logging_2.13:3.9.5",
+        
+        # Config library
+        "com.typesafe:config:1.4.3",
+        
+        # Testing
+        "org.scalatest:scalatest_2.13:3.2.17",
+        "org.apache.pekko:pekko-http-testkit_2.13:1.0.1",
+        "org.apache.pekko:pekko-actor-testkit-typed_2.13:1.0.3",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+
+use_repo(maven, "maven")

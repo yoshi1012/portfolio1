@@ -4,12 +4,12 @@ version := "1.0.0"
 
 scalaVersion := "2.13.12"
 
-// Akka HTTP dependencies
+// Pekko HTTP dependencies (Apache-licensed fork of Akka)
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor-typed" % "2.8.5",
-  "com.typesafe.akka" %% "akka-stream" % "2.8.5",
-  "com.typesafe.akka" %% "akka-http" % "10.5.3",
-  "com.typesafe.akka" %% "akka-http-spray-json" % "10.5.3"
+  "org.apache.pekko" %% "pekko-actor-typed" % "1.0.3",
+  "org.apache.pekko" %% "pekko-stream" % "1.0.3",
+  "org.apache.pekko" %% "pekko-http" % "1.0.1",
+  "org.apache.pekko" %% "pekko-http-spray-json" % "1.0.1"
 )
 
 // Slick (database ORM)
@@ -36,8 +36,8 @@ libraryDependencies ++= Seq(
 // Testing
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.17" % Test,
-  "com.typesafe.akka" %% "akka-http-testkit" % "10.5.3" % Test,
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.8.5" % Test
+  "org.apache.pekko" %% "pekko-http-testkit" % "1.0.1" % Test,
+  "org.apache.pekko" %% "pekko-actor-testkit-typed" % "1.0.3" % Test
 )
 
 // Assembly plugin settings (for creating fat JAR)

@@ -12,6 +12,10 @@
 # 共通設定
 # ============================================================================
 
+# Disable WORKSPACE mode and use Bzlmod (Bazel 8 default)
+# WORKSPACE mode has compatibility issues with Bazel 8.x
+common --noenable_workspace
+
 # ビルド結果を色付きで表示（見やすくするため）
 common --color=yes
 
@@ -43,13 +47,12 @@ build --java_language_version=11
 build --tool_java_language_version=11
 
 # JVMメモリ設定（大規模プロジェクト用）
-build --host_jvm_args=-Xmx4g
-build --host_jvm_args=-Xms1g
+# Note: --host_jvm_args is deprecated in Bazel 8.x, use startup options instead
+startup --host_jvm_args=-Xmx4g
+startup --host_jvm_args=-Xms1g
 
 # Scalaコンパイラの警告を表示
-build --scala_compiler_option=-deprecation
-build --scala_compiler_option=-feature
-build --scala_compiler_option=-unchecked
+# Note: Scala compiler options are configured in the BUILD files, not here
 
 # ============================================================================
 # Node.js設定

@@ -164,7 +164,7 @@ class ApiClient {
   private axiosInstance: AxiosInstance;
   private authToken: string | null = null;
 
-  constructor(baseURL: string = '/api') {
+  constructor(baseURL: string = import.meta.env.VITE_API_BASE_URL || '/api') {
     this.axiosInstance = axios.create({
       baseURL,
       timeout: 30000, // 30秒

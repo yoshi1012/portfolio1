@@ -128,6 +128,7 @@ object Main extends App {
       println()
       println("サーバーを停止するには Ctrl+C を押してください")
       println("=" * 80)
+      println()
 
     case Failure(ex) =>
       println("=" * 80)
@@ -141,6 +142,9 @@ object Main extends App {
       println()
       actorSystem.terminate()
   }
+
+  scala.concurrent.Await.result(bindingFuture, scala.concurrent.duration.Duration.Inf)
+  scala.concurrent.Await.result(actorSystem.whenTerminated, scala.concurrent.duration.Duration.Inf)
 
   
   sys.addShutdownHook {

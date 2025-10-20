@@ -3,7 +3,8 @@ package com.taskmanagement.api
 import org.apache.pekko.http.scaladsl.server.Directives._
 import org.apache.pekko.http.scaladsl.server.{Route, AuthenticationFailedRejection, Directive1}
 import org.apache.pekko.http.scaladsl.model.StatusCodes
-import org.apache.pekko.http.scaladsl.model.headers.HttpChallenge
+import org.apache.pekko.http.scaladsl.model.headers.{HttpChallenge, `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Credentials`}
+import org.apache.pekko.http.scaladsl.model.HttpMethods._
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import com.taskmanagement.services._
 import com.taskmanagement.models._
@@ -353,13 +354,31 @@ class Routes(
   }
 
   /**
+   * CORSヘッダーを追加するディレクティブ
+   */
+  def corsHandler(route: Route): Route = {
+    respondWithHeaders(
+      `Access-Control-Allow-Origin`.*,
+      `Access-Control-Allow-Credentials`(true),
+      `Access-Control-Allow-Headers`("Authorization", "Content-Type", "X-Requested-With"),
+      `Access-Control-Allow-Methods`(GET, POST, PUT, DELETE, OPTIONS)
+    ) {
+      options {
+        complete(StatusCodes.OK)
+      } ~ route
+    }
+  }
+
+  /**
    * 全てのルートを結合
    */
-  val allRoutes: Route = pathPrefix("api") {
-    concat(
-      authRoutes,
-      projectRoutes,
-      taskRoutes
-    )
-  } ~ healthRoute
+  val allRoutes: Route = corsHandler {
+    pathPrefix("api") {
+      concat(
+        authRoutes,
+        projectRoutes,
+        taskRoutes
+      )
+    } ~ healthRoute
+  }
 }

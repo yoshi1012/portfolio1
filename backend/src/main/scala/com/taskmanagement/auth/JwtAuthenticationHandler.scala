@@ -3,6 +3,7 @@ package com.taskmanagement.auth
 import com.taskmanagement.models.JwtPayload
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtClaim}
 import spray.json._
+import spray.json.DefaultJsonProtocol._
 import java.time.Instant
 import scala.util.{Try, Success, Failure}
 
@@ -53,11 +54,11 @@ class JwtAuthenticationHandler(
     val currentTimestamp = Instant.now().getEpochSecond
     val expirationTimestamp = currentTimestamp + (tokenExpirationHours * 3600)
 
-    val payloadJson = JObject(
-      "userId" -> JNumber(userId),
-      "userEmail" -> JString(userEmail),
-      "issuedAt" -> JNumber(currentTimestamp),
-      "expiresAt" -> JNumber(expirationTimestamp)
+    val payloadJson = JsObject(
+      "userId" -> JsNumber(userId),
+      "userEmail" -> JsString(userEmail),
+      "issuedAt" -> JsNumber(currentTimestamp),
+      "expiresAt" -> JsNumber(expirationTimestamp)
     ).compactPrint
 
     val jwtClaim = JwtClaim(

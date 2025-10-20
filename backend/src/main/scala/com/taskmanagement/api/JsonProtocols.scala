@@ -58,8 +58,9 @@ trait JsonProtocols extends DefaultJsonProtocol {
   implicit val loginResponseFormat: RootJsonFormat[LoginResponse] = jsonFormat3(LoginResponse)
 
 
-  implicit val projectCreationRequestFormat: RootJsonFormat[ProjectCreationRequest] = jsonFormat5(ProjectCreationRequest)
+  implicit val projectCreationRequestFormat: RootJsonFormat[ProjectCreationRequest] = jsonFormat6(ProjectCreationRequest)
   implicit val projectFormat: RootJsonFormat[Project] = jsonFormat15(Project)
+  implicit val projectMemberFormat: RootJsonFormat[ProjectMember] = jsonFormat6(ProjectMember)
 
 
   implicit val taskCreationRequestFormat: RootJsonFormat[TaskCreationRequest] = jsonFormat8(TaskCreationRequest)

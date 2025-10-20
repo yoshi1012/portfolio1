@@ -66,7 +66,7 @@ object Main extends App {
     driver = "org.postgresql.Driver",
     executor = AsyncExecutor(
       name = "taskmanagement-db-executor",
-      minThreads = 5,
+      minThreads = 20,
       maxThreads = 20,
       queueSize = 1000,
       maxConnections = 20

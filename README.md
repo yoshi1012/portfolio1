@@ -28,10 +28,10 @@
 ### バックエンド
 - **言語**: Scala 2.13.12
 - **フレームワーク**: Akka HTTP 10.5
-- **データベース**: PostgreSQL 14+
+- **データベース**: PostgreSQL 15+
 - **ORM**: Slick 3.5
-- **認証**: JWT (JSON Web Token)
-- **ビルドツール**: SBT / Bazel
+- **認証**: JWT (JSON Web Token) + BCrypt
+- **ビルドツール**: Bazel 6.0+
 
 ### Webフロントエンド
 - **言語**: TypeScript
@@ -46,42 +46,97 @@
 - **プラットフォーム**: iOS / Android
 
 ### データベース
-- **RDBMS**: PostgreSQL 14+
+- **RDBMS**: PostgreSQL 15+
 - **スキーマ管理**: SQLスクリプト
+- **テーブル数**: 17テーブル（users, tasks, projects, etc.）
+
+### ビルドシステム
+- **Bazel**: モノレポ全体の統合ビルド
+- **増分ビルド**: 変更されたファイルのみを再ビルド
+- **並列ビルド**: 複数のターゲットを並列にビルド
+- **キャッシュ**: ビルド結果をキャッシュして高速化
 
 ## 🚀 クイックスタート
 
 ### 前提条件
 
+- **Bazel 6.0+** (ビルドシステム) - **必須**
 - **Java 11+** (Scalaの実行に必要)
-- **SBT 1.9+** (Scalaのビルドツール)
-- **PostgreSQL 14+** (データベース)
+- **PostgreSQL 15+** (データベース)
 - **Node.js 18+** (フロントエンドのビルドに必要)
 
 ### 1. データベースのセットアップ
 
 ```bash
-createdb taskmanagement_db
-psql -d taskmanagement_db -f database/schema.sql
+# データベースとユーザーを作成
+psql postgres
+CREATE DATABASE taskmanagement;
+CREATE USER taskuser WITH PASSWORD 'taskpass';
+GRANT ALL PRIVILEGES ON DATABASE taskmanagement TO taskuser;
+\q
+
+# スキーマを適用
+psql -U taskuser -d taskmanagement -f database/schema.sql
 ```
 
-### 2. バックエンドの起動
+### 2. バックエンドの起動（Bazel使用）
 
 ```bash
-cd backend
-export DATABASE_URL="jdbc:postgresql://localhost:5432/taskmanagement_db"
-export DATABASE_USER="postgres"
-export DATABASE_PASSWORD="your_password"
-export JWT_SECRET="your-secret-key"
-sbt run
+# バックエンドをビルドして起動
+bazel run //backend:taskmanagement_backend
+
+# サーバーが http://localhost:8080 で起動します
 ```
 
-### 3. Webフロントエンドの起動
+### 3. Webフロントエンドの起動（Bazel使用）
 
 ```bash
-cd web
-npm install
-npm run dev
+# 開発サーバーを起動
+bazel run //web:dev_server
+
+# ブラウザで http://localhost:5173 にアクセス
+```
+
+### 4. モバイルアプリの起動（Bazel使用）
+
+```bash
+# Expo開発サーバーを起動
+bazel run //mobile:start
+
+# QRコードをスキャンして実機で確認
+```
+
+## 🔧 Bazelコマンド
+
+### ビルド
+
+```bash
+# 全てのコンポーネントをビルド
+bazel build //...
+
+# 特定のコンポーネントをビルド
+bazel build //backend:taskmanagement_backend
+bazel build //web:build_production
+```
+
+### テスト
+
+```bash
+# 全てのテストを実行
+bazel test //...
+
+# バックエンドのテストのみ実行
+bazel test //backend/...
+```
+
+### クリーン
+
+```bash
+# ビルド成果物を削除
+bazel clean
+
+# 完全クリーン（全てのキャッシュを削除）
+bazel clean --expunge
 ```
 
 ## 📝 主な機能

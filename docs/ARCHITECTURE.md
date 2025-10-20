@@ -32,7 +32,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                      アプリケーション層                        │
 ├─────────────────────────────────────────────────────────────┤
-│   Akka HTTP Server (Scala)                                  │
+│   Pekko HTTP Server (Scala)                                 │
 │   ├─ API Routes (ルーティング)                               │
 │   ├─ Authentication Service (認証サービス)                    │
 │   ├─ Task Management Service (タスク管理サービス)             │
@@ -53,13 +53,13 @@
 
 | 層 | 技術 | 理由 |
 |---|------|------|
-| **バックエンド** | Scala 2.13 + Akka HTTP | 型安全性、並行処理、関数型プログラミング |
+| **バックエンド** | Scala 2.13.16 + Pekko HTTP 1.0.1 | 型安全性、並行処理、関数型プログラミング、Apache 2.0ライセンス |
 | **データベース** | PostgreSQL 15+ | ACID準拠、複雑なクエリ対応、信頼性 |
 | **ORM** | Slick 3.5 | 型安全なクエリ、非同期処理、Scala統合 |
 | **認証** | JWT + BCrypt | ステートレス認証、セキュアなパスワード保存 |
 | **Webフロントエンド** | React 18 + TypeScript + Vite | コンポーネントベース、型安全、高速ビルド |
 | **モバイル** | React Native + Expo | クロスプラットフォーム、コード共有、迅速な開発 |
-| **ビルドシステム** | Bazel | モノレポ対応、増分ビルド、再現性 |
+| **ビルドシステム** | Bazel 8.3.1 + Bzlmod | モノレポ対応、増分ビルド、再現性、モダンなモジュールシステム |
 
 ---
 
@@ -71,13 +71,14 @@
 
 ```
 portfolio1/
-├── WORKSPACE                    # Bazelのルート設定ファイル
+├── MODULE.bazel                 # Bzlmodモジュール定義（Bazelの依存関係管理）
 ├── .bazelrc                     # Bazelの設定オプション
+├── .bazelversion                # 使用するBazelバージョン（8.3.1）
 ├── README.md                    # プロジェクト概要
 │
 ├── backend/                     # Scalaバックエンド
 │   ├── BUILD                    # Bazelビルド定義
-│   ├── build.sbt                # SBT設定（参考用）
+│   ├── build.sbt                # SBT設定（参考用、実際のビルドはBazelを使用）
 │   └── src/
 │       ├── main/
 │       │   ├── scala/
@@ -156,7 +157,7 @@ portfolio1/
 ┌─────────────────────────────────────────────────────────────┐
 │                        API層 (Routes)                        │
 │  役割: HTTPリクエストの受付、レスポンスの返却                   │
-│  技術: Akka HTTP、Spray JSON                                 │
+│  技術: Pekko HTTP、Spray JSON                                │
 │  ファイル: api/Routes.scala, api/JsonProtocols.scala         │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -354,7 +355,7 @@ case class UserResponse(
 
 ### 並行処理とスレッドモデル
 
-Akka HTTPは、非同期・ノンブロッキングなアーキテクチャを採用しています。
+Pekko HTTPは、非同期・ノンブロッキングなアーキテクチャを採用しています。
 
 ```scala
 // 全ての処理はFutureで非同期実行される
@@ -1371,7 +1372,7 @@ jobs:
 
 **バックエンド**:
 - 非同期処理（Scala Future）
-- 並列処理（Akka Streams）
+- 並列処理（Pekko Streams）
 - コネクションプーリング
 
 **フロントエンド**:

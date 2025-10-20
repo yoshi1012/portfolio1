@@ -22,9 +22,9 @@
 
 以下のソフトウェアをインストールしてください：
 
-#### 1. Bazel 6.0以上
+#### 1. Bazel 8.3.1
 
-**重要**: このプロジェクトは、Bazelをビルドシステムとして使用します。
+**重要**: このプロジェクトは、Bazel 8.3.1とBzlmodを使用します。`.bazelversion`ファイルで指定されたバージョンが自動的に使用されます。
 
 **macOS (Homebrew使用):**
 ```bash
@@ -33,11 +33,9 @@ brew install bazelisk
 
 **Ubuntu/Debian:**
 ```bash
-sudo apt install apt-transport-https curl gnupg
-curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
-sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
-echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-sudo apt update && sudo apt install bazel
+# Bazeliskをインストール（推奨）
+sudo wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+sudo chmod +x /usr/local/bin/bazel
 ```
 
 **Windows:**
@@ -46,7 +44,7 @@ sudo apt update && sudo apt install bazel
 **確認:**
 ```bash
 bazel --version
-# bazel 6.x.x または それ以上が表示されればOK
+# bazel 8.3.1 が表示されればOK（.bazelversion で指定）
 ```
 
 **Bazelとは？**
@@ -143,17 +141,42 @@ npm --version
 
 ### Bazelの基本概念
 
-#### WORKSPACE ファイル
+#### MODULE.bazel ファイル（Bzlmod）
 
-プロジェクトのルートにある`WORKSPACE`ファイルは、外部依存関係を定義します。
+プロジェクトのルートにある`MODULE.bazel`ファイルは、モジュールと外部依存関係を定義します。
 
 ```python
-# 例: Scala rules の定義
-http_archive(
-    name = "io_bazel_rules_scala",
-    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.4.0/rules_scala-v6.4.0.tar.gz",
+# モジュール定義
+module(
+    name = "portfolio1",
+    version = "0.1.0",
 )
+
+# Bazel依存関係
+bazel_dep(name = "rules_scala", version = "7.0.0")
+bazel_dep(name = "rules_jvm_external", version = "6.3")
+
+# Maven依存関係
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven_portfolio",
+    artifacts = [
+        "org.apache.pekko:pekko-actor_2.13:1.0.3",
+        "org.apache.pekko:pekko-http_2.13:1.0.1",
+    ],
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "maven_portfolio")
+
+# Scala バージョン設定
+scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
+scala_config.settings(scala_version = "2.13.16")
+
+scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
+scala_deps.scala()
 ```
+
+**重要**: このプロジェクトは**Bzlmod**（モダンなBazelモジュールシステム）を使用しています。古いWORKSPACEファイルは使用しません。
 
 #### BUILD ファイル
 
@@ -163,8 +186,12 @@ http_archive(
 # 例: Scalaライブラリの定義
 scala_library(
     name = "auth_library",
-    srcs = ["src/main/scala/com/taskmanagement/auth/*.scala"],
-    deps = ["@maven//:com_github_jwt_scala_jwt_core_2_13"],
+    srcs = ["src/main/scala/com/taskmanagement/auth/JwtAuthenticationHandler.scala"],
+    deps = [
+        ":models_library",
+        "@maven_portfolio//:com_github_jwt_scala_jwt_core_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
+    ],
 )
 ```
 
@@ -173,12 +200,22 @@ scala_library(
 `.bazelrc`ファイルは、Bazelのビルドオプションを設定します。
 
 ```bash
-# 例: 並列ジョブ数を自動設定
-build --jobs=auto
+# Bzlmodを有効化（必須）
+common --enable_bzlmod
 
-# 例: ビルドキャッシュを有効化
-build --disk_cache=~/.cache/bazel
+# サンドボックスデバッグ
+build --sandbox_debug
 ```
+
+#### .bazelversion ファイル
+
+`.bazelversion`ファイルは、使用するBazelのバージョンを指定します。
+
+```
+8.3.1
+```
+
+Bazeliskを使用している場合、このファイルで指定されたバージョンが自動的にダウンロードされて使用されます。
 
 ### Bazelの基本コマンド
 
@@ -420,21 +457,28 @@ curl -X GET http://localhost:8080/api/tasks/my \
 
 ### ライブラリの追加
 
-新しいMaven依存関係を追加する場合は、`WORKSPACE`ファイルを編集します：
+新しいMaven依存関係を追加する場合は、`MODULE.bazel`ファイルを編集します：
 
 ```python
-maven_install(
+# MODULE.bazel
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven_portfolio",
     artifacts = [
         # 既存の依存関係...
+        "org.apache.pekko:pekko-actor_2.13:1.0.3",
         
         # 新しい依存関係を追加
-        "com.example:new-library:1.0.0",
+        "com.example:new-library_2.13:1.0.0",
     ],
     repositories = [
         "https://repo1.maven.org/maven2",
     ],
 )
+use_repo(maven, "maven_portfolio")
 ```
+
+**注意**: Scala 2.13用のライブラリは、通常`_2.13`サフィックスが必要です。
 
 ---
 

@@ -162,22 +162,7 @@ bazel fetch //backend/...
 bazel build //backend:taskmanagement_backend
 ```
 
-#### SBTを使用する場合（参考用）
-
-```bash
-# SBTをインストール（macOS）
-brew install sbt
-
-# SBTをインストール（Linux）
-echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
-sudo apt-get update
-sudo apt-get install sbt
-
-# 依存関係を取得
-cd backend
-sbt compile
-```
+**注意**: このプロジェクトは**Bazelでのビルドが必須**です。`build.sbt`ファイルは参考用として残していますが、実際のビルドには使用しません。
 
 ### ステップ2: 設定ファイルの作成
 
@@ -1028,10 +1013,6 @@ object Main {
 ```bash
 # Bazelでビルドして起動
 bazel run //backend:taskmanagement_backend
-
-# または、SBTで起動
-cd backend
-sbt run
 ```
 
 **curlでテスト**:
@@ -1588,10 +1569,6 @@ class AuthenticationServiceTest extends AnyFlatSpec with Matchers {
 # Bazelでテストを実行
 bazel test //backend:authentication_service_test
 bazel test //backend/...  # 全てのテスト
-
-# SBTでテストを実行
-cd backend
-sbt test
 ```
 
 ---

@@ -26,12 +26,12 @@
 ## 🏗️ 技術スタック
 
 ### バックエンド
-- **言語**: Scala 2.13.12
-- **フレームワーク**: Akka HTTP 10.5
+- **言語**: Scala 2.13.16
+- **フレームワーク**: Pekko HTTP 1.0.1 (Apache 2.0ライセンス)
 - **データベース**: PostgreSQL 15+
 - **ORM**: Slick 3.5
 - **認証**: JWT (JSON Web Token) + BCrypt
-- **ビルドツール**: Bazel 6.0+
+- **ビルドツール**: Bazel 8.3.1 + Bzlmod
 
 ### Webフロントエンド
 - **言語**: TypeScript
@@ -60,7 +60,7 @@
 
 ### 前提条件
 
-- **Bazel 6.0+** (ビルドシステム) - **必須**
+- **Bazel 8.3.1** (ビルドシステム) - **必須** (`.bazelversion`で指定)
 - **Java 11+** (Scalaの実行に必要)
 - **PostgreSQL 15+** (データベース)
 - **Node.js 18+** (フロントエンドのビルドに必要)

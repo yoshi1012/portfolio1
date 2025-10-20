@@ -7,8 +7,8 @@
 # 定義するファイルです。ソースファイル、依存関係、ビルドターゲットを
 # 指定します。
 
-load("@rules_scala//scala:scala.bzl", "scala_binary", "scala_library", "scala_test")
-# Docker image support temporarily disabled for Bzlmod migration
+load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_library", "scala_test")
+# Docker image support temporarily disabled
 # load("@io_bazel_rules_docker//scala:image.bzl", "scala_image")
 
 # ============================================================================

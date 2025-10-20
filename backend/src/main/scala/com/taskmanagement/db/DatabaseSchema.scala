@@ -1,6 +1,6 @@
 package com.taskmanagement.db
 
-import com.taskmanagement.models._
+import com.taskmanagement.models.{Tag => TagModel, _}
 import slick.jdbc.PostgresProfile.api._
 import java.sql.Timestamp
 import java.time.LocalDate
@@ -213,7 +213,7 @@ class TaskDependenciesTable(tag: Tag) extends Table[TaskDependency](tag, "task_d
 /**
  * タグテーブル定義
  */
-class TagsTable(tag: Tag) extends Table[Tag](tag, "tags") {
+class TagsTable(tag: Tag) extends Table[TagModel](tag, "tags") {
   def tagId = column[Long]("tag_id", O.PrimaryKey, O.AutoInc)
   def tagName = column[String]("tag_name")
   def tagColorCode = column[String]("tag_color_code")
@@ -221,7 +221,7 @@ class TagsTable(tag: Tag) extends Table[Tag](tag, "tags") {
   def tagCreatedAt = column[Timestamp]("tag_created_at")
   def tagDeletedAt = column[Option[Timestamp]]("tag_deleted_at")
 
-  def * = (tagId, tagName, tagColorCode, parentWorkspaceId, tagCreatedAt, tagDeletedAt) <> (Tag.tupled, Tag.unapply)
+  def * = (tagId, tagName, tagColorCode, parentWorkspaceId, tagCreatedAt, tagDeletedAt) <> (TagModel.tupled, TagModel.unapply)
 }
 
 /**

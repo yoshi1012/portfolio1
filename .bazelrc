@@ -1,0 +1,166 @@
+# Bazel設定ファイル (.bazelrc)
+#
+# このファイルは、Bazelのビルド動作をカスタマイズするための設定ファイルです。
+#
+# 初心者向け解説:
+# .bazelrcファイルは、Bazelコマンドのデフォルト動作を設定します。
+# 例えば、ビルドの並列度、キャッシュの場所、コンパイラオプションなどを
+# ここで指定できます。プロジェクト全体で共通の設定を定義することで、
+# 全ての開発者が同じ環境でビルドできるようになります。
+
+# ============================================================================
+# 共通設定
+# ============================================================================
+
+# Enable Bzlmod (modern Bazel module system)
+common --enable_bzlmod
+build --sandbox_debug
+
+# ビルド結果を色付きで表示（見やすくするため）
+common --color=yes
+
+# ビルドの進行状況を詳細に表示
+common --show_progress_rate_limit=0.5
+
+# タイムスタンプを表示
+common --show_timestamps
+
+# ============================================================================
+# ビルド設定
+# ============================================================================
+
+# 並列ジョブ数を自動設定（CPUコア数に基づく）
+build --jobs=auto
+
+# ビルドキャッシュを有効化（再ビルドを高速化）
+build --disk_cache=~/.cache/bazel
+
+# テストの出力を常に表示
+build --test_output=errors
+
+# ============================================================================
+# Java/Scala設定
+# ============================================================================
+
+# Java 11を使用（Scalaバックエンド用）
+build --java_language_version=11
+build --tool_java_language_version=11
+
+# JVMメモリ設定（大規模プロジェクト用）
+# Note: --host_jvm_args is deprecated in Bazel 8.x, use startup options instead
+startup --host_jvm_args=-Xmx4g
+startup --host_jvm_args=-Xms1g
+
+# Scalaコンパイラの警告を表示
+# Note: Scala compiler options are configured in the BUILD files, not here
+
+# ============================================================================
+# Node.js設定
+# ============================================================================
+
+# Node.jsのメモリ制限を増やす（大規模フロントエンド用）
+build --define=NODE_OPTIONS=--max-old-space-size=4096
+
+# ============================================================================
+# テスト設定
+# ============================================================================
+
+# テストを並列実行
+test --test_strategy=standalone
+
+# テスト失敗時の詳細を表示
+test --test_verbose_timeout_warnings
+
+# テストのタイムアウト設定
+test --test_timeout=300
+
+# ============================================================================
+# リモートキャッシュ設定（オプション）
+# ============================================================================
+
+# リモートキャッシュを使用する場合は、以下のコメントを外してください
+# build --remote_cache=https://your-remote-cache-url
+# build --remote_upload_local_results=true
+
+# ============================================================================
+# プラットフォーム別設定
+# ============================================================================
+
+# Linux用の設定
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+
+# macOS用の設定
+build:macos --cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
+build:macos --macos_minimum_os=10.15
+
+# Windows用の設定
+build:windows --cxxopt=/std:c++17
+build:windows --host_cxxopt=/std:c++17
+
+# ============================================================================
+# デバッグ設定
+# ============================================================================
+
+# デバッグビルド用の設定
+build:debug --compilation_mode=dbg
+build:debug --strip=never
+
+# ============================================================================
+# リリース設定
+# ============================================================================
+
+# リリースビルド用の設定（最適化有効）
+build:release --compilation_mode=opt
+build:release --strip=always
+
+# ============================================================================
+# CI/CD設定
+# ============================================================================
+
+# CI環境用の設定
+build:ci --color=no
+build:ci --curses=no
+build:ci --show_progress_rate_limit=5
+build:ci --noshow_loading_progress
+build:ci --noshow_progress
+
+# ============================================================================
+# 開発者向け設定
+# ============================================================================
+
+# 開発時の設定（高速ビルド優先）
+build:dev --compilation_mode=fastbuild
+build:dev --disk_cache=~/.cache/bazel-dev
+
+# ============================================================================
+# 使い方（コメント）
+# ============================================================================
+
+# この.bazelrcファイルの使い方:
+#
+# 1. デフォルト設定でビルド:
+#    bazel build //backend:taskmanagement_backend
+#
+# 2. デバッグビルド:
+#    bazel build --config=debug //backend:taskmanagement_backend
+#
+# 3. リリースビルド（最適化有効）:
+#    bazel build --config=release //backend:taskmanagement_backend
+#
+# 4. 開発用高速ビルド:
+#    bazel build --config=dev //backend:taskmanagement_backend
+#
+# 5. CI環境でビルド:
+#    bazel build --config=ci //backend:taskmanagement_backend
+#
+# 6. プラットフォーム指定ビルド:
+#    bazel build --config=linux //backend:taskmanagement_backend
+#    bazel build --config=macos //backend:taskmanagement_backend
+#    bazel build --config=windows //backend:taskmanagement_backend
+#
+# カスタマイズ:
+# - 並列ジョブ数を変更: --jobs=4
+# - キャッシュを無効化: --disk_cache=
+# - テスト出力を全て表示: --test_output=all

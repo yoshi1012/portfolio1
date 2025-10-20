@@ -1,8 +1,8 @@
 package com.taskmanagement
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.server.Route
 import com.taskmanagement.api.Routes
 import com.taskmanagement.services._
 import com.taskmanagement.auth.JwtAuthenticationHandler
@@ -66,7 +66,7 @@ object Main extends App {
     driver = "org.postgresql.Driver",
     executor = AsyncExecutor(
       name = "taskmanagement-db-executor",
-      minThreads = 5,
+      minThreads = 20,
       maxThreads = 20,
       queueSize = 1000,
       maxConnections = 20
@@ -128,6 +128,7 @@ object Main extends App {
       println()
       println("サーバーを停止するには Ctrl+C を押してください")
       println("=" * 80)
+      println()
 
     case Failure(ex) =>
       println("=" * 80)
@@ -141,6 +142,9 @@ object Main extends App {
       println()
       actorSystem.terminate()
   }
+
+  scala.concurrent.Await.result(bindingFuture, scala.concurrent.duration.Duration.Inf)
+  scala.concurrent.Await.result(actorSystem.whenTerminated, scala.concurrent.duration.Duration.Inf)
 
   
   sys.addShutdownHook {

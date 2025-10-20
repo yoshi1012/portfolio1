@@ -1,9 +1,11 @@
 package com.taskmanagement.api
 
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import org.apache.pekko.http.scaladsl.server.Directives._
+import org.apache.pekko.http.scaladsl.server.{Route, AuthenticationFailedRejection, Directive1}
+import org.apache.pekko.http.scaladsl.model.StatusCodes
+import org.apache.pekko.http.scaladsl.model.headers.{HttpChallenge, `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Credentials`}
+import org.apache.pekko.http.scaladsl.model.HttpMethods._
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import com.taskmanagement.services._
 import com.taskmanagement.models._
 import com.taskmanagement.auth.JwtAuthenticationHandler
@@ -58,25 +60,12 @@ class Routes(
         jwtHandler.extractTokenFromAuthorizationHeader(authHeader) match {
           case Some(token) =>
             jwtHandler.validateTokenAndExtractPayload(token) match {
-              case Some(payload) =>
-                provide(payload.userId)
-              case None =>
-                complete(StatusCodes.Unauthorized, ErrorResponse(
-                  errorCode = "INVALID_TOKEN",
-                  errorMessage = "無効なトークンです"
-                ))
+              case Some(payload) => provide(payload.userId)
+              case None => reject(AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsRejected, HttpChallenge("Bearer", "realm=\"api\""))).toDirective[Tuple1[Long]]
             }
-          case None =>
-            complete(StatusCodes.Unauthorized, ErrorResponse(
-              errorCode = "MISSING_TOKEN",
-              errorMessage = "認証トークンが必要です"
-            ))
+          case None => reject(AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsMissing, HttpChallenge("Bearer", "realm=\"api\""))).toDirective[Tuple1[Long]]
         }
-      case None =>
-        complete(StatusCodes.Unauthorized, ErrorResponse(
-          errorCode = "MISSING_AUTH_HEADER",
-          errorMessage = "Authorizationヘッダーが必要です"
-        ))
+      case None => reject(AuthenticationFailedRejection(AuthenticationFailedRejection.CredentialsMissing, HttpChallenge("Bearer", "realm=\"api\""))).toDirective[Tuple1[Long]]
     }
   }
 
@@ -120,7 +109,7 @@ class Routes(
       path("logout") {
         post {
           authenticateUser { userId =>
-            optionalHeaderValueByName("Authorization").flatMap {
+            optionalHeaderValueByName("Authorization") {
               case Some(authHeader) =>
                 jwtHandler.extractTokenFromAuthorizationHeader(authHeader) match {
                   case Some(token) =>
@@ -151,7 +140,7 @@ class Routes(
       path("me") {
         get {
           authenticateUser { userId =>
-            optionalHeaderValueByName("Authorization").flatMap {
+            optionalHeaderValueByName("Authorization") {
               case Some(authHeader) =>
                 jwtHandler.extractTokenFromAuthorizationHeader(authHeader) match {
                   case Some(token) =>
@@ -365,13 +354,31 @@ class Routes(
   }
 
   /**
+   * CORSヘッダーを追加するディレクティブ
+   */
+  def corsHandler(route: Route): Route = {
+    respondWithHeaders(
+      `Access-Control-Allow-Origin`.*,
+      `Access-Control-Allow-Credentials`(true),
+      `Access-Control-Allow-Headers`("Authorization", "Content-Type", "X-Requested-With"),
+      `Access-Control-Allow-Methods`(GET, POST, PUT, DELETE, OPTIONS)
+    ) {
+      options {
+        complete(StatusCodes.OK)
+      } ~ route
+    }
+  }
+
+  /**
    * 全てのルートを結合
    */
-  val allRoutes: Route = pathPrefix("api") {
-    concat(
-      authRoutes,
-      projectRoutes,
-      taskRoutes
-    )
-  } ~ healthRoute
+  val allRoutes: Route = corsHandler {
+    pathPrefix("api") {
+      concat(
+        authRoutes,
+        projectRoutes,
+        taskRoutes
+      )
+    } ~ healthRoute
+  }
 }

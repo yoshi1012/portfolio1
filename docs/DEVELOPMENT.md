@@ -1,17 +1,18 @@
 # 開発ガイド
 
-このドキュメントでは、開発環境のセットアップ方法、ビルド方法、テスト方法、デプロイ方法について説明します。
+このドキュメントでは、開発環境のセットアップ方法、Bazelを使用したビルド方法、テスト方法、デプロイ方法について説明します。
 
 ## 目次
 
 1. [開発環境のセットアップ](#開発環境のセットアップ)
-2. [バックエンド開発](#バックエンド開発)
-3. [フロントエンド開発](#フロントエンド開発)
-4. [モバイルアプリ開発](#モバイルアプリ開発)
-5. [データベース管理](#データベース管理)
-6. [テスト](#テスト)
-7. [ビルドとデプロイ](#ビルドとデプロイ)
-8. [トラブルシューティング](#トラブルシューティング)
+2. [Bazelビルドシステム](#bazelビルドシステム)
+3. [バックエンド開発](#バックエンド開発)
+4. [フロントエンド開発](#フロントエンド開発)
+5. [モバイルアプリ開発](#モバイルアプリ開発)
+6. [データベース管理](#データベース管理)
+7. [テスト](#テスト)
+8. [ビルドとデプロイ](#ビルドとデプロイ)
+9. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -21,7 +22,42 @@
 
 以下のソフトウェアをインストールしてください：
 
-#### 1. Java Development Kit (JDK) 11以上
+#### 1. Bazel 8.3.1
+
+**重要**: このプロジェクトは、Bazel 8.3.1とBzlmodを使用します。`.bazelversion`ファイルで指定されたバージョンが自動的に使用されます。
+
+**macOS (Homebrew使用):**
+```bash
+brew install bazelisk
+```
+
+**Ubuntu/Debian:**
+```bash
+# Bazeliskをインストール（推奨）
+sudo wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+sudo chmod +x /usr/local/bin/bazel
+```
+
+**Windows:**
+[Bazelisk](https://github.com/bazelbuild/bazelisk/releases)をダウンロードして、PATHに追加
+
+**確認:**
+```bash
+bazel --version
+# bazel 8.3.1 が表示されればOK（.bazelversion で指定）
+```
+
+**Bazelとは？**
+
+Bazelは、Googleが開発したビルドシステムです。以下の特徴があります：
+
+- **増分ビルド**: 変更されたファイルのみを再ビルド
+- **並列ビルド**: 複数のターゲットを並列にビルド
+- **再現性**: 同じ入力から常に同じ出力を生成
+- **キャッシュ**: ビルド結果をキャッシュして高速化
+- **モノレポ対応**: 複数のプロジェクトを1つのリポジトリで管理
+
+#### 2. Java Development Kit (JDK) 11以上
 
 Scalaの実行に必要です。
 
@@ -45,46 +81,20 @@ java -version
 # java version "11.0.x" または それ以上が表示されればOK
 ```
 
-#### 2. SBT (Scala Build Tool) 1.9以上
-
-Scalaプロジェクトのビルドツールです。
-
-**macOS (Homebrew使用):**
-```bash
-brew install sbt
-```
-
-**Ubuntu/Debian:**
-```bash
-echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
-sudo apt-get update
-sudo apt-get install sbt
-```
-
-**Windows:**
-[SBT公式サイト](https://www.scala-sbt.org/download.html)からインストーラーをダウンロード
-
-**確認:**
-```bash
-sbt --version
-# sbt version 1.9.x または それ以上が表示されればOK
-```
-
 #### 3. PostgreSQL 14以上
 
 データベースサーバーです。
 
 **macOS (Homebrew使用):**
 ```bash
-brew install postgresql@14
-brew services start postgresql@14
+brew install postgresql@15
+brew services start postgresql@15
 ```
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get update
-sudo apt-get install postgresql-14 postgresql-contrib-14
+sudo apt-get install postgresql-15 postgresql-contrib-15
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 ```
@@ -95,7 +105,7 @@ sudo systemctl enable postgresql
 **確認:**
 ```bash
 psql --version
-# psql (PostgreSQL) 14.x または それ以上が表示されればOK
+# psql (PostgreSQL) 15.x または それ以上が表示されればOK
 ```
 
 #### 4. Node.js 18以上
@@ -127,6 +137,167 @@ npm --version
 
 ---
 
+## Bazelビルドシステム
+
+### Bazelの基本概念
+
+#### MODULE.bazel ファイル（Bzlmod）
+
+プロジェクトのルートにある`MODULE.bazel`ファイルは、モジュールと外部依存関係を定義します。
+
+```python
+# モジュール定義
+module(
+    name = "portfolio1",
+    version = "0.1.0",
+)
+
+# Bazel依存関係
+bazel_dep(name = "rules_scala", version = "7.0.0")
+bazel_dep(name = "rules_jvm_external", version = "6.3")
+
+# Maven依存関係
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven_portfolio",
+    artifacts = [
+        "org.apache.pekko:pekko-actor_2.13:1.0.3",
+        "org.apache.pekko:pekko-http_2.13:1.0.1",
+    ],
+    repositories = ["https://repo1.maven.org/maven2"],
+)
+use_repo(maven, "maven_portfolio")
+
+# Scala バージョン設定
+scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
+scala_config.settings(scala_version = "2.13.16")
+
+scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
+scala_deps.scala()
+```
+
+**重要**: このプロジェクトは**Bzlmod**（モダンなBazelモジュールシステム）を使用しています。古いWORKSPACEファイルは使用しません。
+
+#### BUILD ファイル
+
+各ディレクトリの`BUILD`ファイルは、ビルドターゲットを定義します。
+
+```python
+# 例: Scalaライブラリの定義
+scala_library(
+    name = "auth_library",
+    srcs = ["src/main/scala/com/taskmanagement/auth/JwtAuthenticationHandler.scala"],
+    deps = [
+        ":models_library",
+        "@maven_portfolio//:com_github_jwt_scala_jwt_core_2_13",
+        "@maven_portfolio//:io_spray_spray_json_2_13",
+    ],
+)
+```
+
+#### .bazelrc ファイル
+
+`.bazelrc`ファイルは、Bazelのビルドオプションを設定します。
+
+```bash
+# Bzlmodを有効化（必須）
+common --enable_bzlmod
+
+# サンドボックスデバッグ
+build --sandbox_debug
+```
+
+#### .bazelversion ファイル
+
+`.bazelversion`ファイルは、使用するBazelのバージョンを指定します。
+
+```
+8.3.1
+```
+
+Bazeliskを使用している場合、このファイルで指定されたバージョンが自動的にダウンロードされて使用されます。
+
+### Bazelの基本コマンド
+
+#### ビルド
+
+```bash
+# 特定のターゲットをビルド
+bazel build //backend:taskmanagement_backend
+
+# 全てのターゲットをビルド
+bazel build //...
+
+# 特定のディレクトリ配下をビルド
+bazel build //backend/...
+```
+
+#### 実行
+
+```bash
+# バイナリを実行
+bazel run //backend:taskmanagement_backend
+
+# 引数を渡す
+bazel run //backend:taskmanagement_backend -- --port 8081
+```
+
+#### テスト
+
+```bash
+# 特定のテストを実行
+bazel test //backend:authentication_service_test
+
+# 全てのテストを実行
+bazel test //...
+
+# テスト結果を詳細表示
+bazel test //backend/... --test_output=all
+```
+
+#### クリーン
+
+```bash
+# ビルド成果物を削除
+bazel clean
+
+# 全てのキャッシュを削除（完全クリーン）
+bazel clean --expunge
+```
+
+#### クエリ
+
+```bash
+# ターゲットの依存関係を表示
+bazel query --output=graph //backend:taskmanagement_backend
+
+# 全てのターゲットを表示
+bazel query //...
+
+# 特定のファイルに依存するターゲットを検索
+bazel query 'rdeps(//..., //backend/src/main/scala/com/taskmanagement/models:Models.scala)'
+```
+
+### Bazelの設定プロファイル
+
+`.bazelrc`で定義された設定プロファイルを使用できます。
+
+```bash
+# デバッグビルド
+bazel build --config=debug //backend:taskmanagement_backend
+
+# リリースビルド（最適化有効）
+bazel build --config=release //backend:taskmanagement_backend
+
+# 開発用高速ビルド
+bazel build --config=dev //backend:taskmanagement_backend
+
+# CI環境用
+bazel build --config=ci //backend:taskmanagement_backend
+```
+
+---
+
 ## バックエンド開発
 
 ### 初回セットアップ
@@ -138,10 +309,19 @@ npm --version
 psql postgres
 
 # データベースを作成
-CREATE DATABASE taskmanagement_db;
+CREATE DATABASE taskmanagement;
+
+# ユーザーを作成
+CREATE USER taskuser WITH PASSWORD 'taskpass';
+
+# 権限を付与
+GRANT ALL PRIVILEGES ON DATABASE taskmanagement TO taskuser;
 
 # 接続を確認
-\c taskmanagement_db
+\c taskmanagement
+
+# スキーマの権限を付与
+GRANT ALL ON SCHEMA public TO taskuser;
 
 # 終了
 \q
@@ -151,56 +331,73 @@ CREATE DATABASE taskmanagement_db;
 
 ```bash
 # プロジェクトのルートディレクトリから
-psql -d taskmanagement_db -f database/schema.sql
+psql -U taskuser -d taskmanagement -f database/schema.sql
 ```
 
 成功すると、以下のようなメッセージが表示されます：
 ```
-CREATE EXTENSION
 CREATE TABLE
 CREATE INDEX
+CREATE TRIGGER
 ...
-INSERT 0 3
 ```
 
-#### 3. 環境変数の設定
+#### 3. 設定ファイルの確認
 
-`.env`ファイルを`backend/`ディレクトリに作成します：
+`backend/src/main/resources/application.conf` を確認します：
+
+```hocon
+database {
+  url = "jdbc:postgresql://localhost:5432/taskmanagement"
+  user = "taskuser"
+  password = "taskpass"
+  driver = "org.postgresql.Driver"
+}
+
+server {
+  interface = "0.0.0.0"
+  port = 8080
+}
+
+jwt {
+  secretKey = "your-secret-key-change-this-in-production"
+  expirationSeconds = 86400  # 24時間
+}
+```
+
+**重要:** `jwt.secretKey` は、本番環境では必ず変更してください。
+
+### Bazelでのビルドと実行
+
+#### ビルド
 
 ```bash
-cd backend
-cat > .env << 'EOF'
-DATABASE_URL=jdbc:postgresql://localhost:5432/taskmanagement_db
-DATABASE_USER=postgres
-DATABASE_PASSWORD=your_password_here
-JWT_SECRET=your-secret-key-change-this-in-production-make-it-long-and-random
-JWT_EXPIRATION_HOURS=24
-SERVER_INTERFACE=0.0.0.0
-SERVER_PORT=8080
-EOF
+# バックエンドをビルド
+bazel build //backend:taskmanagement_backend
+
+# ビルド成果物の場所
+# bazel-bin/backend/taskmanagement_backend
 ```
 
-**重要:** `DATABASE_PASSWORD`と`JWT_SECRET`は必ず変更してください。
-
-### 開発サーバーの起動
+#### 実行
 
 ```bash
-cd backend
+# バックエンドを起動
+bazel run //backend:taskmanagement_backend
 
-# 環境変数を読み込む
-export $(cat .env | xargs)
-
-# SBTを起動
-sbt
-
-# SBTシェル内で以下を実行
-> compile  # 初回コンパイル（時間がかかります）
-> run      # サーバーを起動
+# サーバーが起動すると、以下のようなメッセージが表示されます：
+# サーバーが起動しました: http://0.0.0.0:8080/
 ```
 
-サーバーが起動すると、以下のようなメッセージが表示されます：
-```
-✓ サーバーが起動しました: http://0.0.0.0:8080/
+#### 開発時のワークフロー
+
+```bash
+# 1. コードを変更
+# 2. ビルドして実行（Bazelが自動的に変更を検出）
+bazel run //backend:taskmanagement_backend
+
+# または、ビルドだけ実行してエラーチェック
+bazel build //backend:taskmanagement_backend
 ```
 
 ### APIのテスト
@@ -208,51 +405,80 @@ sbt
 別のターミナルを開いて、curlでAPIをテストします：
 
 ```bash
-# ヘルスチェック
-curl http://localhost:8080/health
-
 # ユーザー登録
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "userEmail": "test@example.com",
-    "userFullName": "テストユーザー",
-    "plainTextPassword": "password123"
+    "registrationEmail": "test@example.com",
+    "registrationPassword": "password123",
+    "registrationFullName": "テストユーザー"
   }'
 
 # レスポンス例:
 # {
-#   "jwtToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-#   "userInfo": {
-#     "userId": 4,
-#     "userEmail": "test@example.com",
-#     "userFullName": "テストユーザー",
-#     ...
-#   },
-#   "sessionExpiresAt": 1234567890
+#   "loginToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "loginUser": {
+#     "responseUserId": 1,
+#     "responseUserEmail": "test@example.com",
+#     "responseUserFullName": "テストユーザー",
+#     "responseUserCreatedAt": "2024-01-15T10:30:00Z"
+#   }
 # }
+
+# ログイン
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "loginEmail": "test@example.com",
+    "loginPassword": "password123"
+  }'
+
+# 現在のユーザー情報取得（トークンが必要）
+TOKEN="<上記で取得したトークン>"
+curl -X GET http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+
+# タスク作成
+curl -X POST http://localhost:8080/api/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "creationTitle": "新しいタスク",
+    "creationDescription": "タスクの説明",
+    "creationProjectId": 1,
+    "creationPriority": "high",
+    "creationDueDate": "2024-12-31"
+  }'
+
+# 自分のタスク一覧取得
+curl -X GET http://localhost:8080/api/tasks/my \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-### コードの変更
+### ライブラリの追加
 
-SBTは自動的にコードの変更を検出しません。変更後は以下を実行してください：
+新しいMaven依存関係を追加する場合は、`MODULE.bazel`ファイルを編集します：
 
-```bash
-# SBTシェル内で
-> reStart  # サーバーを再起動
+```python
+# MODULE.bazel
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven_portfolio",
+    artifacts = [
+        # 既存の依存関係...
+        "org.apache.pekko:pekko-actor_2.13:1.0.3",
+        
+        # 新しい依存関係を追加
+        "com.example:new-library_2.13:1.0.0",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+use_repo(maven, "maven_portfolio")
 ```
 
-または、SBTシェルを終了して`sbt run`を再実行します。
-
-### ログの確認
-
-ログは標準出力に表示されます。ログレベルは`src/main/resources/application.conf`で設定できます：
-
-```hocon
-akka {
-  loglevel = "DEBUG"  # DEBUG, INFO, WARNING, ERROR
-}
-```
+**注意**: Scala 2.13用のライブラリは、通常`_2.13`サフィックスが必要です。
 
 ---
 
@@ -261,48 +487,68 @@ akka {
 ### 初回セットアップ
 
 ```bash
+# Webディレクトリに移動
 cd web
 
-# 依存関係のインストール
+# 依存関係のインストール（初回のみ）
 npm install
 ```
 
-### 開発サーバーの起動
+### Bazelでの開発サーバー起動
 
 ```bash
-npm run dev
+# プロジェクトのルートディレクトリから
+bazel run //web:dev_server
+
+# サーバーが起動すると、以下のようなメッセージが表示されます：
+# VITE v5.0.11  ready in 500 ms
+# ➜  Local:   http://localhost:5173/
 ```
 
-サーバーが起動すると、以下のようなメッセージが表示されます：
-```
-VITE v5.0.11  ready in 500 ms
-
-➜  Local:   http://localhost:3000/
-➜  Network: use --host to expose
-```
-
-ブラウザで `http://localhost:3000` を開くと、アプリケーションが表示されます。
+ブラウザで `http://localhost:5173` を開くと、アプリケーションが表示されます。
 
 ### ホットリロード
 
 コードを変更すると、自動的にブラウザがリロードされます。
 
-### ビルド
-
-本番用のビルドを作成するには：
+### 型チェック
 
 ```bash
-npm run build
+# TypeScriptの型チェックを実行
+bazel run //web:typecheck
 ```
 
-ビルドされたファイルは`dist/`ディレクトリに出力されます。
+### Lint
+
+```bash
+# ESLintでコード品質をチェック
+bazel run //web:lint
+```
+
+### フォーマット
+
+```bash
+# Prettierでコードを整形
+bazel run //web:format
+```
+
+### プロダクションビルド
+
+```bash
+# 最適化されたビルドを作成
+bazel build //web:build_production
+
+# ビルド成果物の場所
+# bazel-bin/web/dist/
+```
 
 ### プレビュー
 
-ビルドしたファイルをプレビューするには：
-
 ```bash
-npm run preview
+# ビルドしたファイルをプレビュー
+bazel run //web:preview_server
+
+# ブラウザで http://localhost:4173 にアクセス
 ```
 
 ---
@@ -312,46 +558,67 @@ npm run preview
 ### 初回セットアップ
 
 ```bash
+# Mobileディレクトリに移動
 cd mobile
 
-# 依存関係のインストール
-npm install
+# 依存関係のインストール（初回のみ）
+npm install --legacy-peer-deps
 ```
 
-### Expoの起動
+### Bazelでの開発サーバー起動
 
 ```bash
-npm start
-```
+# プロジェクトのルートディレクトリから
+bazel run //mobile:start
 
-QRコードが表示されます。
+# QRコードが表示されます
+```
 
 ### デバイスでの実行
 
 #### Android
 
-1. Google PlayストアからExpo Goアプリをインストール
-2. Expo Goアプリを開く
-3. QRコードをスキャン
-
-#### iOS
-
-1. App StoreからExpo Goアプリをインストール
-2. Expo Goアプリを開く
-3. QRコードをスキャン
-
-### エミュレーターでの実行
-
-#### Android Emulator
-
 ```bash
-npm run android
+# Androidエミュレータで起動
+bazel run //mobile:android
+
+# または、実機で実行
+# 1. Google PlayストアからExpo Goアプリをインストール
+# 2. Expo Goアプリを開く
+# 3. QRコードをスキャン
 ```
 
-#### iOS Simulator (macOSのみ)
+#### iOS (macOSのみ)
 
 ```bash
-npm run ios
+# iOSシミュレータで起動
+bazel run //mobile:ios
+
+# または、実機で実行
+# 1. App StoreからExpo Goアプリをインストール
+# 2. Expo Goアプリを開く
+# 3. QRコードをスキャン
+```
+
+### 型チェック
+
+```bash
+# TypeScriptの型チェックを実行
+bazel run //mobile:typecheck
+```
+
+### Lint
+
+```bash
+# ESLintでコード品質をチェック
+bazel run //mobile:lint
+```
+
+### テスト
+
+```bash
+# Jestでユニットテストを実行
+bazel run //mobile:test
 ```
 
 ---
@@ -361,7 +628,7 @@ npm run ios
 ### データベースへの接続
 
 ```bash
-psql -d taskmanagement_db
+psql -U taskuser -d taskmanagement
 ```
 
 ### よく使うSQLコマンド
@@ -372,15 +639,29 @@ psql -d taskmanagement_db
 
 -- テーブルの構造を表示
 \d users
+\d tasks
+\d projects
 
 -- ユーザー一覧を表示
 SELECT user_id, user_email, user_full_name FROM users;
 
 -- タスク一覧を表示
-SELECT task_id, task_title, current_task_status FROM tasks;
+SELECT task_id, task_title, task_status, task_priority FROM tasks;
+
+-- プロジェクト一覧を表示
+SELECT project_id, project_name, project_status FROM projects;
+
+-- 特定のユーザーのタスクを表示
+SELECT t.task_id, t.task_title, t.task_status
+FROM tasks t
+WHERE t.task_assigned_to_user_id = 1;
 
 -- データベースをリセット（全データ削除）
-TRUNCATE users, organizations, workspaces, projects, tasks CASCADE;
+TRUNCATE users, organizations, workspaces, projects, sections, tasks, 
+         task_dependencies, tags, task_tags, comments, attachments, 
+         notifications, activity_logs, user_sessions, 
+         organization_members, workspace_members, project_members 
+CASCADE;
 ```
 
 ### スキーマの再適用
@@ -389,13 +670,23 @@ TRUNCATE users, organizations, workspaces, projects, tasks CASCADE;
 
 ```bash
 # データベースを削除
-dropdb taskmanagement_db
+dropdb -U taskuser taskmanagement
 
 # データベースを再作成
-createdb taskmanagement_db
+createdb -U taskuser taskmanagement
 
 # スキーマを適用
-psql -d taskmanagement_db -f database/schema.sql
+psql -U taskuser -d taskmanagement -f database/schema.sql
+```
+
+### データベースのバックアップ
+
+```bash
+# バックアップを作成
+pg_dump -U taskuser taskmanagement > backup.sql
+
+# バックアップから復元
+psql -U taskuser -d taskmanagement < backup.sql
 ```
 
 ---
@@ -405,15 +696,34 @@ psql -d taskmanagement_db -f database/schema.sql
 ### バックエンドのテスト
 
 ```bash
-cd backend
-sbt test
+# 特定のテストを実行
+bazel test //backend:authentication_service_test
+
+# 全てのテストを実行
+bazel test //backend/...
+
+# テスト結果を詳細表示
+bazel test //backend/... --test_output=all
+
+# カバレッジレポートを生成
+bazel coverage //backend/...
 ```
 
 ### フロントエンドのテスト
 
 ```bash
-cd web
-npm test
+# Webのテストを実行（将来実装）
+# bazel test //web:test
+
+# Mobileのテストを実行
+bazel run //mobile:test
+```
+
+### 統合テスト
+
+```bash
+# 全てのコンポーネントのテストを実行
+bazel test //...
 ```
 
 ---
@@ -422,46 +732,53 @@ npm test
 
 ### バックエンドのビルド
 
-実行可能なJARファイルを作成します：
+#### JARファイルの作成
 
 ```bash
-cd backend
-sbt assembly
+# 実行可能なバイナリをビルド
+bazel build //backend:taskmanagement_backend
+
+# ビルド成果物の場所
+# bazel-bin/backend/taskmanagement_backend
 ```
 
-JARファイルは`target/scala-2.13/taskmanagement-server.jar`に生成されます。
-
-### JARファイルの実行
+#### Dockerイメージの作成
 
 ```bash
-# 環境変数を設定
-export DATABASE_URL="jdbc:postgresql://localhost:5432/taskmanagement_db"
-export DATABASE_USER="postgres"
-export DATABASE_PASSWORD="your_password"
-export JWT_SECRET="your-secret-key"
+# Dockerイメージをビルド
+bazel build //backend:taskmanagement_backend_image
 
-# JARファイルを実行
-java -jar target/scala-2.13/taskmanagement-server.jar
+# イメージをDockerにロード
+bazel run //backend:taskmanagement_backend_image
+
+# コンテナを起動
+docker run -p 8080:8080 \
+  -e DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/taskmanagement \
+  -e DATABASE_USER=taskuser \
+  -e DATABASE_PASSWORD=taskpass \
+  -e JWT_SECRET=your-secret-key \
+  bazel/backend:taskmanagement_backend_image
 ```
 
 ### フロントエンドのビルド
 
 ```bash
-cd web
-npm run build
-```
+# プロダクションビルドを作成
+bazel build //web:build_production
 
-ビルドされたファイルは`dist/`ディレクトリに出力されます。
+# ビルド成果物の場所
+# bazel-bin/web/dist/
+```
 
 ### 静的ファイルのホスティング
 
-Nginxの設定例：
+#### Nginxの設定例
 
 ```nginx
 server {
     listen 80;
     server_name example.com;
-    root /path/to/portfolio1/web/dist;
+    root /path/to/bazel-bin/web/dist;
     index index.html;
 
     location / {
@@ -472,15 +789,77 @@ server {
         proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+```
+
+#### Vercelへのデプロイ
+
+```bash
+cd web
+npm run build
+vercel --prod
+```
+
+### モバイルアプリのビルド
+
+#### Android APK
+
+```bash
+# Android APKをビルド
+bazel run //mobile:build_android
+
+# EAS (Expo Application Services) を使用
+```
+
+#### iOS IPA
+
+```bash
+# iOS IPAをビルド（macOSのみ）
+bazel run //mobile:build_ios
+
+# EAS (Expo Application Services) を使用
 ```
 
 ---
 
 ## トラブルシューティング
 
-### バックエンドが起動しない
+### Bazel関連
+
+#### 問題: Bazelのビルドが遅い
+
+**解決方法:**
+```bash
+# ビルドキャッシュを確認
+bazel info
+
+# キャッシュをクリーンアップ
+bazel clean
+
+# 並列ジョブ数を増やす
+bazel build --jobs=16 //backend:taskmanagement_backend
+```
+
+#### 問題: 依存関係の解決エラー
+
+```
+ERROR: Unable to find package for @maven//:com_typesafe_akka_akka_http_2_13
+```
+
+**解決方法:**
+```bash
+# WORKSPACEファイルの依存関係を再取得
+bazel sync
+
+# または、完全クリーン
+bazel clean --expunge
+bazel build //backend:taskmanagement_backend
+```
+
+### バックエンド関連
 
 #### 問題: ポートが既に使用されている
 
@@ -495,12 +874,6 @@ lsof -i :8080
 
 # プロセスを終了
 kill -9 <PID>
-```
-
-または、別のポートを使用：
-```bash
-export SERVER_PORT=8081
-sbt run
 ```
 
 #### 問題: データベースに接続できない
@@ -521,12 +894,12 @@ org.postgresql.util.PSQLException: Connection refused
 
 2. 接続情報が正しいか確認
    ```bash
-   psql -d taskmanagement_db -U postgres
+   psql -U taskuser -d taskmanagement
    ```
 
-3. `pg_hba.conf`の設定を確認（必要に応じて）
+3. `application.conf`の設定を確認
 
-### フロントエンドが起動しない
+### フロントエンド関連
 
 #### 問題: 依存関係のインストールエラー
 
@@ -552,10 +925,15 @@ Failed to fetch
 
 **解決方法:**
 1. バックエンドが起動しているか確認
-2. `vite.config.ts`のプロキシ設定を確認
+   ```bash
+   curl http://localhost:8080/api/auth/me
+   ```
+
+2. CORSエラーの場合、バックエンドのCORS設定を確認
+
 3. ブラウザのネットワークタブでリクエストを確認
 
-### モバイルアプリが起動しない
+### モバイルアプリ関連
 
 #### 問題: Expoアプリで接続できない
 
@@ -564,6 +942,7 @@ Failed to fetch
 2. ファイアウォールがポート19000-19001をブロックしていないか確認
 3. トンネルモードを使用：
    ```bash
+   cd mobile
    npm start -- --tunnel
    ```
 
@@ -573,10 +952,21 @@ Failed to fetch
 
 ### 1. コミット前のチェックリスト
 
-- [ ] コードがコンパイルできる
-- [ ] テストが通る
-- [ ] リンターエラーがない
-- [ ] コミットメッセージが明確
+```bash
+# ビルドが通るか確認
+bazel build //...
+
+# テストが通るか確認
+bazel test //...
+
+# Lintエラーがないか確認
+bazel run //web:lint
+bazel run //mobile:lint
+
+# 型チェックが通るか確認
+bazel run //web:typecheck
+bazel run //mobile:typecheck
+```
 
 ### 2. ブランチ戦略
 
@@ -587,19 +977,38 @@ Failed to fetch
 
 ### 3. コードレビュー
 
-プルリクエストを作成する際は、以下を含めてください：
+- 変数名がわかりやすいか
+- 一般的な名前（data, result, tempなど）を避けているか
+- 型が明示されているか
+- エラーハンドリングが適切か
+- テストが書かれているか
 
-- 変更内容の説明
-- テスト方法
-- スクリーンショット（UI変更の場合）
-- 関連するIssue番号
+### 4. パフォーマンス最適化
+
+```bash
+# ビルド時間を計測
+bazel build //backend:taskmanagement_backend --profile=profile.json
+
+# プロファイルを分析
+bazel analyze-profile profile.json
+```
 
 ---
 
-## 次のステップ
+## まとめ
 
-開発環境のセットアップが完了したら、以下のドキュメントを参照してください：
+このガイドに従って開発を進めることで、Bazelを使用した効率的な開発ワークフローを実現できます。
 
-- [アーキテクチャ設計](ARCHITECTURE.md) - システムの全体像を理解する
-- [コーディングガイドライン](CODING_GUIDELINES.md) - コーディング規約を学ぶ
-- [実装ガイド](IMPLEMENTATION_GUIDE.md) - 一から実装する方法を学ぶ
+**開発の流れ**:
+1. Bazelで依存関係を管理
+2. `bazel build` でビルド
+3. `bazel run` で実行
+4. `bazel test` でテスト
+5. コミット前に全てのチェックを実行
+
+**重要なポイント**:
+- Bazelは増分ビルドを行うため、変更されたファイルのみを再ビルドします
+- ビルドキャッシュを活用することで、ビルド時間を大幅に短縮できます
+- モノレポ構成により、全てのコンポーネントを統一的に管理できます
+
+このガイドを参考に、効率的な開発を進めてください。
